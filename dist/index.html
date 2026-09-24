@@ -1,0 +1,150 @@
+<!doctype html>
+<!-- 知华科技（上海如静知华信息科技有限公司） | https://www.zhuatech.cn/ | 商业咨询微信：zhuatech / zhuatech2 -->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#071629" />
+    <meta name="description" content="知华活动抽奖大屏：扫码签到、设置奖项、自定义背景并现场抽奖。" />
+    <title>活动抽奖大屏 · 知华科技</title>
+    <link rel="icon" href="assets/zhuatech-logo.jpg?v=2" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="vendor/qrcode.js" defer></script>
+    <script src="vendor/qrcode_UTF8.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="https://www.zhuatech.cn/" target="_blank" rel="noopener noreferrer" aria-label="知华科技官网">
+        <img src="assets/zhuatech-logo.jpg?v=2" alt="知华科技 LOGO" />
+        <span>知华科技</span>
+      </a>
+      <span class="topbar-label">活动抽奖大屏</span>
+      <a class="topbar-link" href="https://www.zhuatech.cn/contact.html?utm_source=event_lottery&amp;utm_medium=free_tool&amp;utm_campaign=event_lottery" target="_blank" rel="noopener noreferrer">定制与源码咨询 <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main class="workspace">
+      <div class="page-title">
+        <div>
+          <p class="eyebrow">现场工具 / DRAW STUDIO</p>
+          <h1>活动抽奖</h1>
+        </div>
+        <div class="save-status" id="saveStatus" role="status">抽奖结果保存在此浏览器</div>
+      </div>
+
+      <div class="layout">
+        <section class="stage-panel" aria-labelledby="stageTitle">
+          <div class="stage" id="stage">
+            <div class="stage-topline">
+              <span class="stage-kicker">LIVE DRAW <span class="live-dot" aria-hidden="true"></span></span>
+              <button class="icon-button fullscreen-button" id="fullscreenBtn" type="button" aria-label="进入全屏">⛶ <span>全屏投放</span></button>
+            </div>
+            <div class="stage-center">
+              <div class="stage-orbit orbit-one" aria-hidden="true"></div>
+              <div class="stage-orbit orbit-two" aria-hidden="true"></div>
+              <div class="stage-content">
+                <div class="prize-chip" id="stagePrize">请选择奖项</div>
+                <h2 id="stageTitle" class="stage-name" aria-live="polite">准备开始</h2>
+                <p class="stage-caption" id="stageCaption">扫码签到或录入名单后，点击开始抽奖</p>
+              </div>
+            </div>
+            <div class="stage-bottomline">
+              <span id="stageCount">0 人待抽取</span>
+              <button class="stage-draw-button" id="stageDrawBtn" type="button">开始抽奖</button>
+              <span>知华科技 · ZHUA TECH</span>
+            </div>
+          </div>
+
+          <div class="draw-toolbar">
+            <label class="field prize-pick">
+              <span>当前奖项</span>
+              <select id="prizeSelect" aria-label="当前奖项"></select>
+            </label>
+            <button class="primary-button" id="drawBtn" type="button">开始抽奖</button>
+          </div>
+          <p class="inline-message" id="drawMessage" role="status"></p>
+        </section>
+
+        <aside class="setup-panel" aria-label="抽奖设置">
+          <section class="card checkin-card" aria-labelledby="checkinTitle">
+            <div class="card-heading"><div><span class="section-index">01</span><h2 id="checkinTitle">扫码签到</h2></div><span class="count-badge" id="onlineCount">未创建</span></div>
+            <div id="createEventPanel">
+              <label class="field" for="eventName"><span>活动名称</span><input id="eventName" class="event-name" maxlength="60" placeholder="例如：年度员工活动" /></label>
+              <button class="primary-button event-create" id="createEventBtn" type="button">创建签到二维码</button>
+            </div>
+            <div id="activeEventPanel" hidden>
+              <strong id="activeEventTitle"></strong>
+              <div class="qr-box" id="checkinQr" aria-label="签到二维码"></div>
+              <a id="checkinLink" target="_blank" rel="noopener noreferrer"></a>
+              <div class="card-actions event-actions">
+                <button class="text-button" id="copyCheckinBtn" type="button">复制签到链接</button>
+                <button class="text-button" id="toggleCheckinBtn" type="button">结束签到</button>
+                <button class="text-button danger" id="deleteEventBtn" type="button">删除活动</button>
+              </div>
+            </div>
+            <p class="helper-text" id="checkinHint">参与者扫码填写姓名后，名单会自动同步到本页面。签到链接须能在参与者手机上打开。</p>
+          </section>
+
+          <section class="card participants-card" aria-labelledby="participantsTitle">
+            <div class="card-heading">
+              <div><span class="section-index">02</span><h2 id="participantsTitle">参与名单</h2></div>
+              <span class="count-badge" id="participantCount">0 人</span>
+            </div>
+            <label class="field text-field" for="participants">也可粘贴 Excel 姓名列，补充扫码名单</label>
+            <textarea id="participants" rows="7" placeholder="张三&#10;李四&#10;王五" spellcheck="false"></textarea>
+            <div class="card-actions">
+              <input id="importFile" type="file" accept=".csv,.txt,text/csv,text/plain" hidden />
+              <button class="text-button" id="importBtn" type="button">导入 CSV/TXT</button>
+              <button class="text-button" id="exampleBtn" type="button">填入示例</button>
+              <button class="text-button" id="clearNamesBtn" type="button">清空名单</button>
+            </div>
+            <p class="helper-text" id="namesHint">同名会合并；需要区分时请加部门或编号。手动名单只保存在此浏览器。</p>
+          </section>
+
+          <section class="card prizes-card" aria-labelledby="prizesTitle">
+            <div class="card-heading">
+              <div><span class="section-index">03</span><h2 id="prizesTitle">奖项设置</h2></div>
+              <button class="small-button" id="addPrizeBtn" type="button">＋ 添加奖项</button>
+            </div>
+            <div class="prize-list" id="prizeList"></div>
+          </section>
+
+          <section class="card background-card" aria-labelledby="backgroundTitle">
+            <div class="card-heading"><div><span class="section-index">04</span><h2 id="backgroundTitle">大屏背景</h2></div></div>
+            <label class="field" for="backgroundTheme"><span>内置主题</span><select id="backgroundTheme"><option value="ocean">深蓝</option><option value="violet">紫色</option><option value="gold">暖金</option></select></label>
+            <div class="card-actions background-actions">
+              <input id="backgroundFile" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+              <button class="text-button" id="backgroundUploadBtn" type="button">上传背景图片</button>
+              <button class="text-button" id="backgroundRemoveBtn" type="button">移除图片</button>
+            </div>
+            <label class="field range-field" for="backgroundPosition"><span>图片位置</span><input id="backgroundPosition" type="range" min="0" max="100" value="50" /></label>
+            <label class="field range-field" for="backgroundShade"><span>背景压暗</span><input id="backgroundShade" type="range" min="0" max="85" value="50" /></label>
+            <p class="helper-text" id="backgroundHint">背景图片仅保存在当前浏览器，不会上传。</p>
+          </section>
+        </aside>
+      </div>
+
+      <section class="results-section" aria-labelledby="resultsTitle">
+        <div class="results-heading">
+          <div>
+            <span class="section-index">05</span>
+            <h2 id="resultsTitle">中奖结果</h2>
+            <span class="count-badge" id="winnerCount">0 人</span>
+          </div>
+          <div class="result-actions">
+            <button class="secondary-button" id="exportBtn" type="button">导出 CSV</button>
+            <button class="text-button danger" id="resetBtn" type="button">重置结果</button>
+          </div>
+        </div>
+        <div class="empty-results" id="emptyResults">抽取完成后，中奖名单会显示在这里。</div>
+        <div class="result-grid" id="resultGrid" hidden></div>
+      </section>
+    </main>
+
+    <footer class="footer" id="contact">
+      <div><strong>知华科技</strong><span>上海如静知华信息科技有限公司</span></div>
+      <div>企业活动定制、离线部署、系统集成与源码授权咨询：微信 <button class="copy-button" data-copy="zhuatech" type="button">zhuatech</button> / <button class="copy-button" data-copy="zhuatech2" type="button">zhuatech2</button></div>
+      <a href="https://www.zhuatech.cn/" target="_blank" rel="noopener noreferrer">www.zhuatech.cn ↗</a>
+    </footer>
+  </body>
+</html>

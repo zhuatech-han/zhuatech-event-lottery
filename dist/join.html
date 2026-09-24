@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- 知华科技（上海如静知华信息科技有限公司） | https://www.zhuatech.cn/ | 商业咨询微信：zhuatech / zhuatech2 -->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#071629" />
+    <title>活动签到 · 知华科技</title>
+    <link rel="icon" href="assets/zhuatech-logo.jpg?v=2" />
+    <link rel="stylesheet" href="join.css" />
+    <script src="join.js" defer></script>
+  </head>
+  <body>
+    <header><a href="https://www.zhuatech.cn/" target="_blank" rel="noopener noreferrer"><img src="assets/zhuatech-logo.jpg?v=2" alt="知华科技 LOGO" />知华科技</a></header>
+    <main>
+      <p class="eyebrow">EVENT CHECK-IN</p>
+      <h1 id="eventTitle">正在读取活动…</h1>
+      <p class="intro">请填写用于抽奖的姓名或编号。</p>
+      <form id="checkinForm" hidden>
+        <label for="name">姓名或编号</label>
+        <input id="name" name="name" maxlength="80" autocomplete="name" required placeholder="请输入姓名或编号" />
+        <button id="submitBtn" type="submit">确认签到</button>
+      </form>
+      <p id="message" role="status" aria-live="polite"></p>
+      <p class="note">提交后，姓名或编号会显示在主办方的签到名单中并用于抽奖。请勿填写手机号、身份证号等敏感信息。相同姓名只能签到一次；同名不同人请补充部门或编号。本签到页仅记录填写内容，不能核验是否本人到场。</p>
+    </main>
+    <footer>由 <a href="https://www.zhuatech.cn/" target="_blank" rel="noopener noreferrer">知华科技</a> 提供 · 定制、部署与源码授权咨询微信：zhuatech / zhuatech2</footer>
+  </body>
+</html>
