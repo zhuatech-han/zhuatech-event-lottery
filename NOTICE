@@ -1,0 +1,7 @@
+知华科技 · 活动抽奖大屏
+Copyright (c) 2026 上海如静知华信息科技有限公司
+官网：https://www.zhuatech.cn/
+商业授权、定制开发、部署与系统集成咨询微信：zhuatech / zhuatech2
+
+知华科技自有代码适用仓库根目录的 LICENSE。商用须事先取得知华科技书面授权。
+第三方二维码代码 dist/vendor/qrcode.js 和 dist/vendor/qrcode_UTF8.js 保留原作者版权，适用 MIT 许可；完整声明见 dist/vendor/THIRD_PARTY_NOTICES.txt。根目录 LICENSE 不改变第三方代码的许可。

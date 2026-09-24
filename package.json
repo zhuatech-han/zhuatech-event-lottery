@@ -1,0 +1,11 @@
+{
+  "name": "zhuatech-event-lottery",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "npm run build && node scripts/dev.mjs",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "lint": "node --check dist/app.js && node --check dist/join.js && node --check worker/index.js && node --check scripts/build.mjs && node --check tests/worker.test.mjs"
+  }
+}
