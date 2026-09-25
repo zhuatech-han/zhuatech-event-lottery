@@ -71,6 +71,7 @@
             <div id="createEventPanel">
               <label class="field" for="eventName"><span>活动名称</span><input id="eventName" class="event-name" maxlength="60" placeholder="例如：年度员工活动" /></label>
               <button class="primary-button event-create" id="createEventBtn" type="button">创建签到二维码</button>
+              <div class="card-actions event-actions"><input id="restoreFile" type="file" accept=".json,application/json" hidden /><button class="text-button" id="restoreBtn" type="button">恢复活动备份</button></div>
             </div>
             <div id="activeEventPanel" hidden>
               <strong id="activeEventTitle"></strong>
@@ -78,11 +79,13 @@
               <a id="checkinLink" target="_blank" rel="noopener noreferrer"></a>
               <div class="card-actions event-actions">
                 <button class="text-button" id="copyCheckinBtn" type="button">复制签到链接</button>
+                <button class="text-button" id="backupBtn" type="button">导出活动备份</button>
                 <button class="text-button" id="toggleCheckinBtn" type="button">结束签到</button>
                 <button class="text-button danger" id="deleteEventBtn" type="button">删除活动</button>
               </div>
             </div>
             <p class="helper-text" id="checkinHint">参与者扫码填写姓名后，名单会自动同步到本页面。签到链接须能在参与者手机上打开。</p>
+            <p class="helper-text" id="backupHint" hidden>备份含活动管理凭证，请私下保存；换设备时在同一站点恢复。</p>
           </section>
 
           <section class="card participants-card" aria-labelledby="participantsTitle">
