@@ -430,6 +430,7 @@ function renderCheckin() {
   const active = !!onlineEvent;
   els.createEventPanel.hidden = active;
   els.activeEventPanel.hidden = !active;
+  byId("backupHint").hidden = !active;
   if (!active) { els.onlineCount.textContent = "未创建"; return; }
   const joinUrl = `${location.origin}/join.html?event=${encodeURIComponent(onlineEvent.id)}`;
   els.activeEventTitle.textContent = onlineEvent.title;
@@ -458,7 +459,9 @@ async function refreshCheckins() {
     localStorage.setItem(EVENT_KEY, JSON.stringify(onlineEvent));
     renderCheckin();
     updateNames();
-    els.checkinHint.textContent = `${data.event.open ? "签到开放中" : "签到已结束"}，每 3 秒更新名单。请用另一部手机确认签到链接可访问。`;
+    els.checkinHint.textContent = data.event.open
+      ? "签到开放中，名单自动更新。请用手机确认签到链接可访问。"
+      : "签到已结束，已有名单仍可抽奖。";
   } catch (error) { els.checkinHint.textContent = `同步失败：${error.message} 已获取的名单仍保留在本页。`; }
   finally { polling = false; }
 }
@@ -483,6 +486,71 @@ byId("createEventBtn").addEventListener("click", async () => {
 byId("copyCheckinBtn").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(els.checkinLink.href); els.checkinHint.textContent = "签到链接已复制。"; }
   catch { els.checkinHint.textContent = "复制失败，请长按或手动复制上方链接。"; }
+});
+
+byId("backupBtn").addEventListener("click", () => {
+  if (!onlineEvent) return;
+  const backup = { version: 1, site: location.origin, event: onlineEvent, state };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `活动备份-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  els.checkinHint.textContent = "活动备份已导出，请妥善保管。";
+});
+
+function readBackup(value) {
+  const event = value?.event;
+  const saved = value?.state;
+  if (value?.version !== 1 || value.site !== location.origin) throw new Error("备份格式或站点不匹配，请在原站点恢复。");
+  if (!event || !/^[0-9a-f-]{36}$/.test(event.id) || !/^[0-9a-f]{64}$/.test(event.token)) throw new Error("活动管理凭证无效。");
+  if (!saved || typeof saved.participants !== "string" || saved.participants.length > 200000 || !Array.isArray(saved.prizes) || saved.prizes.length > 20 || !Array.isArray(saved.winners) || saved.winners.length > MAX_NAMES) throw new Error("备份中的抽奖数据无效。");
+  if (saved.prizes.some((p) => !p || typeof p.id !== "string" || typeof p.name !== "string" || p.name.length > 32 || !Number.isInteger(p.count) || p.count < 1 || p.count > MAX_NAMES)) throw new Error("备份中的奖项无效。");
+  if (saved.winners.some((w) => !w || typeof w.participant !== "string" || w.participant.length > 80 || typeof w.prizeId !== "string" || typeof w.prizeName !== "string" || typeof w.time !== "string")) throw new Error("备份中的中奖结果无效。");
+  return { event: { id: event.id, token: event.token }, state: { participants: saved.participants, prizes: saved.prizes, winners: saved.winners } };
+}
+
+byId("restoreBtn").addEventListener("click", () => byId("restoreFile").click());
+byId("restoreFile").addEventListener("change", async () => {
+  const file = byId("restoreFile").files?.[0];
+  if (!file) return;
+  try {
+    if (!/\.json$/i.test(file.name) || file.size > 1024 * 1024) throw new Error("请选择不超过 1 MB 的活动备份 JSON 文件。");
+    const backup = readBackup(JSON.parse(await file.text()));
+    const data = await api(`/api/events/${backup.event.id}/participants`, {
+      headers: { authorization: `Bearer ${backup.event.token}` }
+    });
+    if (!confirm("恢复备份会替换此浏览器当前的名单、奖项和中奖结果，继续吗？")) return;
+    const nextEvent = { ...data.event, token: backup.event.token };
+    const previousState = localStorage.getItem(STORAGE_KEY);
+    const previousEvent = localStorage.getItem(EVENT_KEY);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(backup.state));
+      localStorage.setItem(EVENT_KEY, JSON.stringify(nextEvent));
+    } catch {
+      try {
+        if (previousState === null) localStorage.removeItem(STORAGE_KEY);
+        else localStorage.setItem(STORAGE_KEY, previousState);
+        if (previousEvent === null) localStorage.removeItem(EVENT_KEY);
+        else localStorage.setItem(EVENT_KEY, previousEvent);
+      } catch { /* 存储空间不足时继续提示用户 */ }
+      throw new Error("浏览器无法保存备份，请检查存储空间。");
+    }
+    state = backup.state;
+    onlineEvent = nextEvent;
+    remoteNames = data.participants.map((item) => item.name);
+    selectedPrizeId = state.prizes[0]?.id || null;
+    els.participants.value = state.participants;
+    els.stage.classList.remove("is-winner");
+    renderCheckin(); updateNames(); renderPrizes(); renderPrizeSelect(); renderResults(); updateStage();
+    els.checkinHint.textContent = "活动已恢复，扫码名单已同步。";
+    els.saveStatus.textContent = "已保存在此浏览器";
+  } catch (error) {
+    els.checkinHint.textContent = `恢复失败：${error instanceof SyntaxError ? "备份 JSON 格式不正确。" : error.message}`;
+  } finally { byId("restoreFile").value = ""; }
 });
 
 els.toggleCheckinBtn.addEventListener("click", async () => {
