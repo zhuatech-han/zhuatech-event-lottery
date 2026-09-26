@@ -61,5 +61,5 @@ npm run build
 - 商业授权、定制开发、部署与系统集成咨询微信：`zhuatech`、`zhuatech2`
 
 | 微信 zhuatech | 微信 zhuatech2 |
-| --- | --- |
-| ![知华科技微信 zhuatech](docs/images/wechat-1.png) | ![知华科技微信 zhuatech2](docs/images/wechat-2.png) |
+| :---: | :---: |
+| <img src="docs/images/wechat-1.png" alt="微信 zhuatech" height="200"> | <img src="docs/images/wechat-2.png" alt="微信 zhuatech2" height="200"> |
