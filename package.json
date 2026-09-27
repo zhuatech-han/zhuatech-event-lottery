@@ -6,6 +6,14 @@
     "build": "node scripts/build.mjs",
     "dev": "npm run build && node scripts/dev.mjs",
     "test": "npm run build && node --test tests/*.test.mjs",
-    "lint": "node --check dist/app.js && node --check dist/join.js && node --check worker/index.js && node --check scripts/build.mjs && node --check tests/worker.test.mjs && node --check tests/backup.test.mjs"
+    "lint": "node --check dist/app.js && node --check dist/join.js && node --check worker/index.js && node --check scripts/build.mjs && node --check tests/worker.test.mjs && node --check tests/backup.test.mjs && node --check scripts/dev.mjs && node --check scripts/database.mjs",
+    "check:release": "node scripts/verify-release.mjs"
+  },
+  "author": "上海如静知华信息科技有限公司",
+  "homepage": "https://www.zhuatech.cn/",
+  "license": "SEE LICENSE IN LICENSE",
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=24.19.0"
   }
 }
