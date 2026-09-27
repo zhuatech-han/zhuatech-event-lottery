@@ -3,3 +3,9 @@
 *.tar.gz
 /dist/server/
 /.local/
+
+.env
+.env.*
+!.env.example
+node_modules/
+*.log

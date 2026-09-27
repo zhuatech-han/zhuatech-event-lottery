@@ -2,23 +2,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { DatabaseSync } from "node:sqlite";
+import { openDatabase } from "../scripts/database.mjs";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import worker from "../dist/server/index.js";
 
 function database() {
-  const sqlite = new DatabaseSync(":memory:");
-  return {
-    prepare(sql) {
-      const statement = sqlite.prepare(sql);
-      const wrap = (values = []) => ({
-        bind(...next) { return wrap(next); },
-        run() { const result = statement.run(...values); return { meta: { changes: result.changes } }; },
-        first() { return statement.get(...values) || null; },
-        all() { return { results: statement.all(...values) }; }
-      });
-      return wrap();
-    },
-    async batch(statements) { return statements.map((statement) => statement.run()); }
-  };
+  return openDatabase(":memory:");
 }
 
 async function call(db, path, method = "GET", body, token) {
@@ -63,4 +54,41 @@ test("branded logo is served as an image, not serialized byte numbers", async ()
   const bytes = new Uint8Array(await response.arrayBuffer());
   assert.equal(response.headers.get("content-type"), "image/jpeg");
   assert.deepEqual([...bytes.slice(0, 3)], [0xff, 0xd8, 0xff]);
+});
+
+test("legacy event tables migrate without losing attendees and survive a database reopen", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "lottery-migration-"));
+  const path = join(dir, "events.sqlite");
+  const old = new DatabaseSync(path);
+  old.exec("CREATE TABLE events (id TEXT PRIMARY KEY, title TEXT NOT NULL, admin_hash TEXT NOT NULL, open INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, expires_at TEXT NOT NULL); CREATE TABLE checkins (id TEXT PRIMARY KEY, event_id TEXT NOT NULL, name TEXT NOT NULL, normalized_name TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(event_id, normalized_name)); CREATE INDEX checkins_event_idx ON checkins(event_id);");
+  const id = crypto.randomUUID();
+  old.prepare("INSERT INTO events VALUES (?, ?, ?, 1, ?, ?)").run(id, "旧版测试活动", "0".repeat(64), new Date().toISOString(), "2099-01-01T00:00:00Z");
+  old.prepare("INSERT INTO checkins VALUES (?, ?, ?, ?, ?)").run(crypto.randomUUID(), id, "旧来宾编号", "旧来宾编号", new Date().toISOString());
+  old.close();
+  let db = openDatabase(path);
+  try {
+    assert.equal((await call(db, "/health")).status, 200);
+    assert.equal((await call(db, `/api/events/${id}`)).data.event.title, "旧版测试活动");
+    assert.equal(db.prepare("SELECT COUNT(*) AS count FROM checkins").first().count, 1);
+    assert.equal(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").first().version, 1);
+    db.close();
+    db = openDatabase(path);
+    assert.equal((await call(db, "/health")).status, 200);
+    assert.equal((await call(db, `/api/events/${id}/checkins`, "POST", { name: "新来宾编号" })).status, 201);
+    assert.equal(db.prepare("SELECT COUNT(*) AS count FROM checkins").first().count, 2);
+  } finally { db.close(); rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("failed batch deletion rolls back and health does not expose database or credentials", async () => {
+  const db = database();
+  try {
+    const created = await call(db, "/api/events", "POST", { title: "事务测试" });
+    await assert.rejects(db.batch([
+      db.prepare("DELETE FROM events"),
+      db.prepare("INSERT INTO missing_table VALUES (1)")
+    ]));
+    assert.equal((await call(db, `/api/events/${created.data.event.id}`)).status, 200);
+    assert.deepEqual((await call(db, "/health")).data, { status: "ok" });
+    assert.equal((await call(undefined, "/health")).status, 503);
+  } finally { db.close(); }
 });
