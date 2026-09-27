@@ -1,33 +1,31 @@
 /* 知华科技（上海如静知华信息科技有限公司） | https://www.zhuatech.cn/ | 商业咨询微信：zhuatech / zhuatech2 */
 import { createServer } from "node:http";
-import { DatabaseSync } from "node:sqlite";
+import { openDatabase } from "./database.mjs";
 import { mkdir } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import worker from "../dist/server/index.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const port = Number(process.env.PORT || 4173);
-await mkdir(join(root, ".local"), { recursive: true });
-const sqlite = new DatabaseSync(join(root, ".local/events.sqlite"));
-const db = {
-  prepare(sql) {
-    const statement = sqlite.prepare(sql);
-    const wrap = (values = []) => ({
-      bind(...next) { return wrap(next); },
-      run() { const result = statement.run(...values); return { meta: { changes: result.changes } }; },
-      first() { return statement.get(...values) || null; },
-      all() { return { results: statement.all(...values) }; }
-    });
-    return wrap();
-  },
-  async batch(statements) { return statements.map((statement) => statement.run()); }
-};
+const host = process.env.HOST || "127.0.0.1";
+const dbPath = resolve(process.env.DB_PATH || join(root, ".local/events.sqlite"));
+await mkdir(dirname(dbPath), { recursive: true });
+const db = openDatabase(dbPath);
 
-createServer(async (incoming, outgoing) => {
+const server = createServer(async (incoming, outgoing) => {
   try {
     const chunks = [];
-    for await (const chunk of incoming) chunks.push(chunk);
+    let size = 0;
+    for await (const chunk of incoming) {
+      size += chunk.length;
+      if (size > 16384) {
+        outgoing.writeHead(413, { "content-type": "application/json; charset=utf-8" });
+        outgoing.end(JSON.stringify({ error: "请求内容过长。" }));
+        return;
+      }
+      chunks.push(chunk);
+    }
     const body = Buffer.concat(chunks);
     const request = new Request(`http://127.0.0.1:${port}${incoming.url}`, {
       method: incoming.method, headers: incoming.headers,
@@ -40,4 +38,5 @@ createServer(async (incoming, outgoing) => {
     outgoing.writeHead(500);
     outgoing.end("Internal error");
   }
-}).listen(port, "127.0.0.1", () => console.log(`活动抽奖本地预览：http://127.0.0.1:${port}/`));
+}).listen(port, host, () => console.log(`活动抽奖服务已启动，端口 ${port}`));
+for (const signal of ["SIGTERM", "SIGINT"]) process.once(signal, () => server.close(() => { db.close(); process.exit(0); }));

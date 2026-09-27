@@ -21,7 +21,9 @@ for (const [path, type] of Object.entries(types)) {
   assets[path] = { body: type.startsWith("image/") ? Array.from(bytes) : bytes.toString("utf8"), type };
 }
 const worker = await readFile(join(root, "worker/index.js"), "utf8");
+const migration = await readFile(join(root, "worker/migrations/001_events.sql"), "utf8");
+const statements = migration.replace(/^--.*$/gm, "").split(";").map((sql) => sql.trim()).filter(Boolean);
 const destination = join(root, "dist/server/index.js");
 await mkdir(dirname(destination), { recursive: true });
-await writeFile(destination, `/* Generated from tracked sources by scripts/build.mjs. */\nconst SITE_ASSETS = ${JSON.stringify(assets)};\n${worker}\n`);
+await writeFile(destination, `/* Generated from tracked sources by scripts/build.mjs. */\nconst SITE_ASSETS = ${JSON.stringify(assets)};\nconst SCHEMA_STATEMENTS = ${JSON.stringify(statements)};\n${worker}\n`);
 console.log(`Built ${destination}`);
