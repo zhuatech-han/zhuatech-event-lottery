@@ -34,9 +34,15 @@ async function hash(value) {
 }
 
 async function schema(db) {
-  await db.prepare("CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, title TEXT NOT NULL, admin_hash TEXT NOT NULL, open INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, expires_at TEXT NOT NULL)").run();
-  await db.prepare("CREATE TABLE IF NOT EXISTS checkins (id TEXT PRIMARY KEY, event_id TEXT NOT NULL, name TEXT NOT NULL, normalized_name TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(event_id, normalized_name))").run();
-  await db.prepare("CREATE INDEX IF NOT EXISTS checkins_event_idx ON checkins(event_id)").run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY)").run();
+  const current = await db.prepare("SELECT MAX(version) AS version FROM schema_migrations").first();
+  if (current?.version > 1) throw new Error("Unsupported database version");
+  if (!current?.version) {
+    await db.batch([
+      ...SCHEMA_STATEMENTS.map((sql) => db.prepare(sql)),
+      db.prepare("INSERT OR IGNORE INTO schema_migrations (version) VALUES (1)")
+    ]);
+  }
 }
 
 async function eventFor(db, id) {
@@ -54,11 +60,18 @@ function publicEvent(event) {
   return { id: event.id, title: event.title, open: !!event.open, expiresAt: event.expires_at };
 }
 
-/** Handle same-origin event check-in and organizer requests. 商业咨询微信：zhuatech / zhuatech2。 */
+/** 处理活动创建、公开签到与持有管理凭证的名单、关闭和删除操作。
+ * 官网：https://www.zhuatech.cn/ · 商业咨询微信：zhuatech / zhuatech2。
+ */
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
+    if (path === "/health") {
+      if (!env.DB) return failure("签到服务暂不可用。", 503);
+      try { await schema(env.DB); return reply({ status: "ok" }); }
+      catch { return failure("签到服务暂不可用。", 503); }
+    }
     if (!path.startsWith("/api/")) {
       const asset = SITE_ASSETS[path === "/" ? "/index.html" : path];
       return asset ? new Response(Array.isArray(asset.body) ? Uint8Array.from(asset.body) : asset.body, { headers: { "content-type": asset.type, "cache-control": "no-store", "x-content-type-options": "nosniff" } }) : new Response("Not found", { status: 404 });
@@ -117,7 +130,7 @@ export default {
       return failure("不支持此操作。", 405);
     } catch (error) {
       if (error instanceof Error && ["请使用 JSON 请求。", "请求内容过长。", "请求内容格式不正确。"].includes(error.message)) return failure(error.message, 400);
-      console.error("活动签到接口错误", error);
+      console.error("活动签到接口错误");
       return failure("签到服务发生错误，请稍后重试。", 500);
     }
   }
